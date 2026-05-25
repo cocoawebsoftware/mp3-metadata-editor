@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<title>MP3 Metadata Editor</title>
+
+<script src="https://cdn.jsdelivr.net/npm/browser-id3-writer@4.0.0/dist/browser-id3-writer.min.js"></script>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  background: #1e1e1e;
+  color: #fff;
+}
+
+.app {
+  display: flex;
+  height: 100vh;
+}
+
+/* sidebar */
+.sidebar {
+  width: 260px;
+  background: #252526;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.file-item {
+  padding: 8px;
+  background: #333;
+  margin-bottom: 5px;
+  cursor: pointer;
+}
+
+.file-item:hover {
+  background: #444;
+}
+
+/* main */
+.main {
+  flex: 1;
+  padding: 20px;
+}
+
+.drop-zone {
+  border: 2px dashed #555;
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 15px;
+  color: #aaa;
+}
+
+input {
+  width: 100%;
+  margin: 5px 0;
+  padding: 8px;
+  background: #2d2d2d;
+  border: 1px solid #444;
+  color: #fff;
+}
+
+button {
+  padding: 10px;
+  margin-top: 10px;
+  background: #0078d7;
+  border: none;
+  color: white;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #0090ff;
+}
+
+/* player */
+.player {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin: 10px 0;
+}
+
+canvas {
+  background: #111;
+  border: 1px solid #333;
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+  <!-- LEFT -->
+  <div class="sidebar">
+    <h3>Files</h3>
+    <div id="fileList"></div>
+    <input type="file" id="fileInput" accept=".mp3" multiple hidden />
+    <button onclick="fileInput.click()">+ Add MP3</button>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="main">
+
+    <div id="dropZone" class="drop-zone">
+      Drag & Drop MP3 here
+    </div>
+
+    <!-- Player -->
+    <div class="player">
+      <button id="playBtn">▶</button>
+      <button id="pauseBtn">⏸</button>
+      <canvas id="wave" width="320" height="60"></canvas>
+    </div>
+
+    <input id="title" placeholder="Title" />
+    <input id="artist" placeholder="Artist" />
+    <input id="album" placeholder="Album" />
+    <input id="genre" placeholder="Genre" />
+    <input id="year" placeholder="Year" />
+
+    <button id="saveBtn">Download MP3</button>
+
+  </div>
+
+</div>
+
+<script>
+let files = [];
+let currentIndex = null;
+
+const fileList = document.getElementById("fileList");
+const dropZone = document.getElementById("dropZone");
+
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let audioBuffer = null;
+let source = null;
+
+const canvas = document.getElementById("wave");
+const ctx = canvas.getContext("2d");
+
+const inputs = {
+  title: document.getElementById("title"),
+  artist: document.getElementById("artist"),
+  album: document.getElementById("album"),
+  genre: document.getElementById("genre"),
+  year: document.getElementById("year"),
+};
+
+/* ---------- FILES ---------- */
+function addFiles(list) {
+  for (const f of list) {
+    files.push({
+      file: f,
+      meta: {
+        title: f.name.replace(".mp3",""),
+        artist:"", album:"", genre:"", year:""
+      }
+    });
+  }
+  render();
+}
+
+function render() {
+  fileList.innerHTML = "";
+  files.forEach((f,i)=>{
+    const div = document.createElement("div");
+    div.className = "file-item";
+    div.textContent = f.meta.title;
+    div.onclick = ()=>select(i);
+    fileList.appendChild(div);
+  });
+}
+
+/* ---------- SELECT ---------- */
+async function select(i){
+  currentIndex = i;
+
+  const file = files[i].file;
+  const buf = await file.arrayBuffer();
+
+  audioBuffer = await audioCtx.decodeAudioData(buf);
+  draw(audioBuffer);
+
+  const m = files[i].meta;
+  title.value = m.title;
+  artist.value = m.artist;
+  album.value = m.album;
+  genre.value = m.genre;
+  year.value = m.year;
+}
+
+/* ---------- AUDIO ---------- */
+function play(){
+  if(!audioBuffer) return;
+  source = audioCtx.createBufferSource();
+  source.buffer = audioBuffer;
+  source.connect(audioCtx.destination);
+  source.start();
+}
+
+function pause(){
+  if(source) source.stop();
+}
+
+playBtn.onclick = play;
+pauseBtn.onclick = pause;
+
+/* ---------- WAVE ---------- */
+function draw(buffer){
+  const data = buffer.getChannelData(0);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  ctx.beginPath();
+  const step = Math.floor(data.length / canvas.width);
+
+  for(let i=0;i<canvas.width;i++){
+    let min=1,max=-1;
+
+    for(let j=0;j<step;j++){
+      const v = data[i*step+j];
+      if(v<min)min=v;
+      if(v>max)max=v;
+    }
+
+    ctx.moveTo(i,(1+min)*30);
+    ctx.lineTo(i,(1+max)*30);
+  }
+
+  ctx.strokeStyle="#00aaff";
+  ctx.stroke();
+}
+
+/* ---------- INPUT ---------- */
+Object.keys(inputs).forEach(k=>{
+  inputs[k].oninput = ()=>{
+    if(currentIndex!==null)
+      files[currentIndex].meta[k]=inputs[k].value;
+  };
+});
+
+/* ---------- DROP ---------- */
+dropZone.ondragover=e=>e.preventDefault();
+dropZone.ondrop=e=>{
+  e.preventDefault();
+  addFiles(e.dataTransfer.files);
+};
+
+fileInput.onchange=e=>addFiles(e.target.files);
+
+/* ---------- SAVE ---------- */
+saveBtn.onclick = async ()=>{
+  if(currentIndex===null)return;
+
+  const item = files[currentIndex];
+  const buf = await item.file.arrayBuffer();
+
+  const writer = new ID3Writer(buf);
+
+  writer.setFrame("TIT2", item.meta.title)
+        .setFrame("TPE1", [item.meta.artist])
+        .setFrame("TALB", item.meta.album)
+        .setFrame("TCON", item.meta.genre)
+        .setFrame("TYER", item.meta.year);
+
+  writer.addTag();
+
+  const blob = writer.getBlob();
+  const url = URL.createObjectURL(blob);
+
+  const a=document.createElement("a");
+  a.href=url;
+  a.download=item.file.name;
+  a.click();
+
+  URL.revokeObjectURL(url);
+};
+</script>
+
+</body>
+</html>
