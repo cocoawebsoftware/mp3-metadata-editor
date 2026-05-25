@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>MP3メタデータエディター</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="wrapper">
+    <header>
+      <h1>🎵 MP3メタデータ編集</h1>
+      <div class="toolbar">
+        <button id="btn-folder">フォルダ読み込み</button>
+        <button id="btn-files">ファイル選択</button>
+        <input type="text" id="search-box" placeholder="ファイル検索" />
+        <button id="btn-convert-aac">AAC→MP3変換</button>
+        <button id="btn-save-all">一括保存</button>
+        <button id="btn-replace-title">一括タイトル置換</button>
+      </div>
+    </header>
+    <div id="mainarea">
+      <aside id="left-pane">
+        <div id="file-list"></div>
+      </aside>
+      <main id="center-pane">
+        <img id="cover-image" src="./noimage.png" alt="Jacket" />
+        <label class="cover-upload-btn">
+          画像設定
+          <input id="cover-input" type="file" accept="image/png,image/jpeg,image/jpg" hidden />
+        </label>
+        <audio id="player" controls style="margin:16px 0;width:90%;"></audio>
+        <div id="current-file-path"></div>
+      </main>
+      <section id="right-pane">
+        <h2>メタデータ編集</h2>
+        <div class="form-group">
+          <label>タイトル <input id="meta-title" class="edit-field" type="text" /></label>
+        </div>
+        <div class="form-group">
+          <label>アーティスト <input id="meta-artist" class="edit-field" type="text" /></label>
+        </div>
+        <div class="form-group">
+          <label>アルバム <input id="meta-album" class="edit-field" type="text" /></label>
+        </div>
+        <div class="form-group">
+          <label>ジャンル <input id="meta-genre" class="edit-field" type="text" /></label>
+        </div>
+        <div class="form-group">
+          <label>年 <input id="meta-year" class="edit-field" type="text" /></label>
+        </div>
+        <div class="form-group">
+          <label>コメント <input id="meta-comment" class="edit-field" type="text" /></label>
+        </div>
+        <div class="form-group">
+          <label>トラック番号 <input id="meta-track" class="edit-field" type="text" /></label>
+        </div>
+        <button id="btn-play">再生</button>
+        <button id="btn-save-one" disabled>保存</button>
+      </section>
+    </div>
+    <footer>
+      <span id="progress"></span>
+      <button id="log-clear">ログクリア</button>
+      <div id="log"></div>
+    </footer>
+  </div>
+  <script src="renderer.js"></script>
+</body>
+</html>
